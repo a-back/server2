@@ -31,9 +31,11 @@ class talkToClient (threading.Thread):
                 self.clientSock.send ('bye')
                 break
             printd('Client ' + str (self.addr) + ' say "' + str (recvData) + '"')
-            self.clientSock.send (recvData)
-            if recvData == "close":
+            
+            if str(recvData).lower() == "close":
                 break
+            else:
+                self.clientSock.send (recvData)
         self.clientSock.close ()
 
 _connector = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
