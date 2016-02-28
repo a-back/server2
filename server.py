@@ -1,29 +1,49 @@
-import asyncore 
-import socket 
-host = ''
-port = 2222 
+#!/usr/bin/python2.7
+# -*- coding: UTF-8 -*-
 
+import socket, threading, string
 
-class EchoHandler(asyncore.dispatcher_with_send): 
-    def handle_read(self): 
-        data = self.recv(1024) 
-        if data: 
-            self.send(data) 
+debug = True
 
-class EchoServer(asyncore.dispatcher): 
-    def __init__(self, host, port): 
-        asyncore.dispatcher.__init__(self)
-        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.set_reuse_addr() 
-        self.bind((host, port))
-        self.listen(15)
+_connector = None
+_running = True
 
-    def handle_accept(self):
-        pair = self.accept() 
-        if pair is not None:
-            sock, addr = pair
-            print 'conn', addr
-            handler = EchoHandler(sock)
+_host = '0.0.0.0'
+_port = 2222
+_maxClient = 15
+_recvBuffer = 1024
 
-server = EchoServer(host, port) 
-asyncore.loop()
+def printd (aString):
+    if debug:
+        print aString
+
+class talkToClient (threading.Thread):
+
+    def __init__(self, clientSock, addr):
+        self.clientSock = clientSock
+        self.addr = addr
+        threading.Thread.__init__(self)
+
+    def run (self):
+        while True:
+            recvData = self.clientSock.recv (_recvBuffer)
+            if not recvData:
+                self.clientSock.send ('bye')
+                break
+            printd('Client ' + str (self.addr) + ' say "' + str (recvData) + '"')
+            self.clientSock.send (recvData)
+            if recvData == "close":
+                break
+        self.clientSock.close ()
+
+_connector = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
+_connector.bind ((str(_host), int(_port)))
+_connector.listen (int(_maxClient))
+
+while _running:
+    printd ('Running on ' + _host + ':' + str (_port) + '.')
+    channel, details = _connector.accept ()
+    printd ('Conect on : ' + str (details))
+    talkToClient (channel, details).start ()
+
+_connector.close ()
